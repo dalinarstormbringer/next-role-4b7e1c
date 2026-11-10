@@ -1,5 +1,5 @@
 // App shell cached for offline open; job data is network-first so the latest scan always wins.
-const SHELL = "next-role-shell-v1";
+const SHELL = "next-role-shell-v2";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {

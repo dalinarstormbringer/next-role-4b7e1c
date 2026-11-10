@@ -58,7 +58,7 @@ h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0}
 .note{color:var(--muted);font-size:12.5px}
 .fit{margin:0;font-size:14px}
 .tags{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;font-weight:600;color:var(--accent)}
-.tags .closing{color:var(--bad)} .tags .mine{color:var(--muted)}
+.tags .closing{color:var(--bad)} .tags .mine{color:var(--ink)}
 .foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line);padding-top:10px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 .foot a{color:var(--accent);font-family:var(--f);font-size:13px;font-weight:600;text-decoration:none}
 .empty,.lock{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;color:var(--muted)}
@@ -69,6 +69,14 @@ h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0}
 .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 .small{font-size:12.5px;color:var(--muted)}
 .small a{color:var(--accent)}
+.track{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.acts{display:flex;flex-wrap:wrap;gap:6px}
+.act{font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:8px;padding:6px 11px;cursor:pointer}
+.act[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);font-weight:600}
+.act.neg[aria-pressed="true"]{border-color:var(--bad);color:var(--bad);background:transparent}
+.act:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.notes summary{cursor:pointer;font-size:13px;color:var(--muted)}
+details.notes textarea{margin-top:6px;width:100%;min-height:70px;font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);resize:vertical}
 </style>
 </head>
 <body>
@@ -99,17 +107,13 @@ h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0}
         <button class="chip" id="f-mission" data-f="mission" aria-pressed="false">Mission orgs</button>
         <button class="chip" id="f-nwa" data-f="nwa" aria-pressed="false">NW Arkansas</button>
       </div>
-      <div class="chips" role="group" aria-label="Filter by status">
-        <button class="chip" id="s-open" data-s="open" aria-pressed="true">Open</button>
-        <button class="chip" id="s-applied" data-s="applied" aria-pressed="false">Applied</button>
-        <button class="chip" id="s-passed" data-s="passed" aria-pressed="false">Passed</button>
-        <button class="chip" id="s-closed" data-s="closed" aria-pressed="false">Closed</button>
-      </div>
+      <div class="chips" role="group" aria-label="Filter by your status" id="views"></div>
       <div class="list" id="list"></div>
       <div class="bar">
-        <button class="btn" id="refresh" type="button">Refresh</button>
+        <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="refresh" type="button">Refresh</button><button class="btn primary" id="dl" type="button">Download spreadsheet</button></span>
         <span class="small" id="boardLink"></span>
       </div>
+      <p class="small" style="margin:0">Save, Applied and notes you mark here stay on this phone and go into the spreadsheet. Marks you make on the full board show up here after the next morning scan.</p>
       <button class="btn" id="forget" type="button" style="align-self:flex-start">Forget passphrase on this phone</button>
     </div>
   </section>
@@ -121,7 +125,39 @@ const INTL = new Set(["panama","guatemala","shenzhen","canada","intl-other"]);
 const BUCKET = {nwa:"NW Arkansas",remote:"Remote (US)","us-relocate":"US, relocate",panama:"Panama",guatemala:"Guatemala",shenzhen:"Shenzhen",canada:"Canada","intl-other":"Abroad"};
 const MR = {"Strong match":0,"Possible match":1,"Probably a stretch":2};
 const BR = {panama:0,shenzhen:0,guatemala:0,canada:1,"intl-other":2,"us-relocate":3,remote:4,nwa:5};
-let data = null, place = "all", show = "open";
+let data = null, place = "all", show = "new";
+const TKEY = "nextrole.track";
+const MINE = [
+  {k:"saved", label:"Save", name:"Saved"}, {k:"applied", label:"Applied", name:"Applied"},
+  {k:"interviewing", label:"Interviewing", name:"Interviewing"}, {k:"offer", label:"Offer", name:"Offer"},
+  {k:"passed", label:"Pass", name:"Passed", neg:true}, {k:"rejected", label:"Rejected", name:"Rejected", neg:true}
+];
+const MINE_NAME = Object.fromEntries(MINE.map((m) => [m.k, m.name]));
+const loadTrack = () => { try { return JSON.parse(localStorage.getItem(TKEY) || "{}") || {}; } catch { return {}; } };
+let track = loadTrack();
+const saveTrack = () => { try { localStorage.setItem(TKEY, JSON.stringify(track)); } catch {} };
+const keyOf = (j) => j.url || j.id || (j.employer + "|" + j.title);
+const today = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0"); };
+// Your marks on this phone win over the board's; otherwise the board's marks (from the last scan) show.
+function mine(j){
+  const t = track[keyOf(j)] || {};
+  return {
+    s: "s" in t ? t.s : (j.myStatus || ""),
+    d: "d" in t ? t.d : (j.myStatusDate || ""),
+    a: "a" in t ? t.a : (j.appliedOn || ""),
+    n: "n" in t ? t.n : (j.myNotes || "")
+  };
+}
+const VIEWS = [
+  {k:"new", label:"New", test:(j,m) => !m.s && j.status !== "closed"},
+  {k:"saved", label:"Saved", test:(j,m) => m.s === "saved"},
+  {k:"applied", label:"Applied", test:(j,m) => m.s === "applied"},
+  {k:"interviewing", label:"Interviewing", test:(j,m) => m.s === "interviewing"},
+  {k:"offer", label:"Offer", test:(j,m) => m.s === "offer"},
+  {k:"done", label:"Passed / rejected", test:(j,m) => m.s === "passed" || m.s === "rejected"},
+  {k:"closed", label:"Closed", test:(j,m) => !m.s && j.status === "closed"},
+  {k:"all", label:"All", test:() => true}
+];
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const fmt = (s) => { if (!s) return ""; const d = new Date(s + "T12:00:00"); return isNaN(d) ? s : d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); };
@@ -141,7 +177,6 @@ async function load(pass){
   if (!r.ok) throw new Error("fetch");
   return decrypt(await r.json(), pass);
 }
-const state = (j) => j.status === "closed" ? "closed" : j.myStatus === "applied" ? "applied" : j.myStatus === "passed" ? "passed" : "open";
 function placeOk(j){
   const b = j.locationBucket;
   switch(place){
@@ -159,20 +194,25 @@ const soon = (j) => { if (!j.closingISO) return false; const d = (new Date(j.clo
 function render(){
   const jobs = data.jobs || [];
   $("stamp").textContent = data.lastRun ? "Scan " + fmt(data.lastRun) : "";
-  const open = jobs.filter((j) => state(j) === "open");
-  $("counts").innerHTML = `<span><strong>${open.length}</strong>open</span><span><strong>${open.filter(j=>INTL.has(j.locationBucket)).length}</strong>abroad</span><span><strong>${open.filter(j=>j.match==="Strong match").length}</strong>strong</span><span><strong>${jobs.filter(j=>j.myStatus==="applied").length}</strong>applied</span>`;
-  if (data.boardUrl) $("boardLink").innerHTML = `Mark Applied or Pass on the <a href="${esc(data.boardUrl)}" target="_blank" rel="noopener">full board</a>`;
-  const rows = jobs.filter((j) => state(j) === show && placeOk(j)).sort((a,b) =>
+  const open = jobs.filter((j) => j.status !== "closed");
+  const ms = jobs.map(mine);
+  $("counts").innerHTML = `<span><strong>${open.length}</strong>open</span><span><strong>${open.filter(j=>INTL.has(j.locationBucket)).length}</strong>abroad</span><span><strong>${ms.filter(m=>m.s==="saved").length}</strong>saved</span><span><strong>${ms.filter(m=>["applied","interviewing","offer"].includes(m.s)).length}</strong>in progress</span>`;
+  $("views").innerHTML = VIEWS.map((v) => `<button class="chip" type="button" data-v="${v.k}" aria-pressed="${v.k === show}">${esc(v.label)} ${jobs.filter((j) => v.test(j, mine(j))).length}</button>`).join("");
+  if (data.boardUrl) $("boardLink").innerHTML = `Open the <a href="${esc(data.boardUrl)}" target="_blank" rel="noopener">full board</a>`;
+  const vt = (VIEWS.find((v) => v.k === show) || VIEWS[0]).test;
+  const rows = jobs.filter((j) => vt(j, mine(j)) && placeOk(j)).sort((a,b) =>
     (MR[a.match] ?? 9) - (MR[b.match] ?? 9) || (BR[a.locationBucket] ?? 9) - (BR[b.locationBucket] ?? 9) || String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")));
   const list = $("list");
   if (!jobs.length){ list.innerHTML = `<div class="empty">No roles yet. The morning scan adds roles once it confirms them on the employer's own site.</div>`; return; }
-  if (!rows.length){ list.innerHTML = `<div class="empty">Nothing in this view. Try another filter.</div>`; return; }
+  if (!rows.length){ list.innerHTML = `<div class="empty">Nothing in this view yet. ${show === "saved" ? "Tap Save on a role to add it here." : "Try another filter."}</div>`; return; }
   list.innerHTML = rows.map((j) => {
     const pc = j.match === "Strong match" ? "p-strong" : j.match === "Possible match" ? "p-possible" : "p-stretch";
     const tags = [];
     if (j.mission) tags.push(`<span>Mission org</span>`);
     if (j.closing) tags.push(`<span class="${soon(j) ? "closing" : ""}">Closes ${esc(j.closing)}</span>`);
-    if (j.myStatus) tags.push(`<span class="mine">You marked: ${esc(j.myStatus)}</span>`);
+    const m = mine(j), k = esc(keyOf(j));
+    if (m.s) tags.push(`<span class="mine">${esc(MINE_NAME[m.s] || m.s)}${m.d ? " " + fmt(m.d) : ""}${m.a && m.s !== "applied" ? " · applied " + fmt(m.a) : ""}</span>`);
+    if (j.status === "closed") tags.push(`<span class="closing">Posting closed</span>`);
     return `<article class="card">
       <div class="top"><div style="min-width:0">
         <h2><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a></h2>
@@ -185,6 +225,11 @@ function render(){
       </dl>
       <p class="fit">${esc(j.fit)}</p>
       ${tags.length ? `<div class="tags">${tags.join("")}</div>` : ""}
+      <div class="track">
+        <div class="acts" role="group" aria-label="Your status for this role">${MINE.map((x) => `<button type="button" class="act ${x.neg ? "neg" : ""}" data-k="${k}" data-m="${x.k}" aria-pressed="${m.s === x.k}">${x.k === "saved" && m.s === "saved" ? "Saved" : x.label}</button>`).join("")}</div>
+        <details class="notes" ${m.n ? "open" : ""}><summary>${m.n ? "Your notes" : "Add notes"}</summary>
+          <textarea data-k="${k}" aria-label="Notes for ${esc(j.title)}" placeholder="Recruiter name, next step, dates">${esc(m.n)}</textarea></details>
+      </div>
       <div class="foot"><span>Found ${fmt(j.firstSeen)} · checked ${fmt(j.lastVerified)}</span><a href="${esc(j.url)}" target="_blank" rel="noopener">Open posting</a></div>
     </article>`;
   }).join("");
@@ -209,7 +254,46 @@ $("lock").addEventListener("submit", (e) => { e.preventDefault(); const p = $("p
 $("refresh").addEventListener("click", () => { const p = safeGet(); if (p) start(p); });
 $("forget").addEventListener("click", () => { safeSet(null); data = null; $("pass").value = ""; showLock(""); });
 document.querySelectorAll("[data-f]").forEach((b) => b.addEventListener("click", () => { place = b.dataset.f; document.querySelectorAll("[data-f]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); render(); }));
-document.querySelectorAll("[data-s]").forEach((b) => b.addEventListener("click", () => { show = b.dataset.s; document.querySelectorAll("[data-s]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); render(); }));
+$("views").addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (!b) return; show = b.dataset.v; render(); });
+$("list").addEventListener("click", (e) => {
+  const b = e.target.closest(".act[data-m]"); if (!b || !data) return;
+  const j = (data.jobs || []).find((x) => keyOf(x) === b.dataset.k); if (!j) return;
+  const cur = mine(j), next = cur.s === b.dataset.m ? "" : b.dataset.m;
+  const t = Object.assign({}, track[b.dataset.k] || {});
+  t.s = next; t.d = next ? today() : "";
+  if (next === "applied" && !cur.a) t.a = today();
+  track[b.dataset.k] = t; saveTrack(); render();
+});
+$("list").addEventListener("change", (e) => {
+  const t = e.target; if (!t.matches("textarea[data-k]")) return;
+  const o = Object.assign({}, track[t.dataset.k] || {}); o.n = t.value.trim(); track[t.dataset.k] = o; saveTrack();
+});
+const BUCKET_NAME = BUCKET;
+const COLS = [
+  ["Your status", (j,m) => MINE_NAME[m.s] || ""], ["Status date", (j,m) => m.d], ["Applied on", (j,m) => m.a], ["Your notes", (j,m) => m.n],
+  ["Title", (j) => j.title], ["Employer", (j) => j.employer], ["Location", (j) => j.location], ["Where", (j) => BUCKET_NAME[j.locationBucket] || j.locationBucket || ""],
+  ["Lane", (j) => j.lane || ""], ["Seniority", (j) => j.seniority], ["Match", (j) => j.match], ["Pay", (j) => j.pay], ["Resume to send", (j) => j.resumeVariant || ""],
+  ["Posting status", (j) => j.status], ["Closes", (j) => j.closingISO || ""], ["Found", (j) => j.firstSeen], ["Last checked", (j) => j.lastVerified],
+  ["Req ID", (j) => j.reqId || ""], ["Posting URL", (j) => j.url], ["Move", (j) => j.move], ["Pay note", (j) => j.payNote], ["Why it fits", (j) => j.fit],
+  ["Keywords", (j) => Array.isArray(j.keywords) ? j.keywords.join("; ") : ""]
+];
+const ORDER = {offer:0, interviewing:1, applied:2, saved:3, "":4, passed:5, rejected:6};
+function toCsv(){
+  const cell = (v) => { const s = String(v ?? ""); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const rows = (data.jobs || []).map((j) => [j, mine(j)]).sort((a,b) => (ORDER[a[1].s] ?? 4) - (ORDER[b[1].s] ?? 4) || String(b[0].firstSeen||"").localeCompare(String(a[0].firstSeen||"")));
+  return "\ufeff" + [COLS.map((c) => c[0]), ...rows.map(([j,m]) => COLS.map((c) => c[1](j,m)))].map((r) => r.map(cell).join(",")).join("\r\n");
+}
+$("dl").addEventListener("click", async () => {
+  if (!data) return;
+  const name = `next-role-tracker-${today()}.csv`;
+  const blob = new Blob([toCsv()], {type: "text/csv"});
+  try {
+    const file = new File([blob], name, {type: "text/csv"});
+    if (navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: "Next Role tracker"}); return; }
+  } catch (err) { if (err && err.name === "AbortError") return; }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+});
 document.addEventListener("visibilitychange", () => { if (!document.hidden && data) { const p = safeGet(); if (p) start(p); } });
 
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
