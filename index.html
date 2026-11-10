@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0f6b5c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Next Role">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Next Role</title>
+<style>
+:root{
+  --bg:#f5f6f4; --surface:#ffffff; --ink:#17201d; --muted:#5d6a65; --line:#dde3df;
+  --accent:#0f6b5c; --accent-soft:#e1efeb;
+  --good:#1d7a3e; --good-soft:#e3f2e7; --warn:#9a5b00; --warn-soft:#fbefd9; --stretch:#6b5a8f; --stretch-soft:#ece8f5; --bad:#a33b2b;
+  --f:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#111715; --surface:#18201d; --ink:#e7eeea; --muted:#9aa8a2; --line:#2a3531;
+  --accent:#5cc4ae; --accent-soft:#16342d;
+  --good:#6fd08f; --good-soft:#173322; --warn:#f0b75a; --warn-soft:#3a2b10; --stretch:#b8a7e0; --stretch-soft:#2a2440; --bad:#f08a78;
+  color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.5;
+  padding:calc(env(safe-area-inset-top,0px) + 16px) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 32px) max(16px,env(safe-area-inset-left,0px))}
+[hidden]{display:none!important}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+h1{font-size:26px;font-weight:700;letter-spacing:-.02em;margin:0}
+.stamp{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 14px;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+.btn:focus-visible,.chip:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.counts{display:flex;flex-wrap:wrap;gap:16px;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.counts strong{font-family:var(--mono);color:var(--ink);font-size:18px;font-weight:500;margin-right:4px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+.chip{flex:none;font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 12px;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.list{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.card h2{font-size:17px;font-weight:600;margin:0;line-height:1.3}
+.card h2 a{color:inherit;text-decoration:none}
+.emp{color:var(--muted);font-size:13.5px;margin-top:2px}
+.pill{flex:none;font-size:11.5px;font-weight:600;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.p-strong{background:var(--good-soft);color:var(--good)} .p-possible{background:var(--warn-soft);color:var(--warn)} .p-stretch{background:var(--stretch-soft);color:var(--stretch)}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px;margin:0}
+.facts dt{color:var(--muted);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding-top:2px}
+.facts dd{margin:0;min-width:0}
+.pay{font-family:var(--mono);font-size:13px}
+.note{color:var(--muted);font-size:12.5px}
+.fit{margin:0;font-size:14px}
+.tags{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;font-weight:600;color:var(--accent)}
+.tags .closing{color:var(--bad)} .tags .mine{color:var(--muted)}
+.foot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;border-top:1px solid var(--line);padding-top:10px;font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.foot a{color:var(--accent);font-family:var(--f);font-size:13px;font-weight:600;text-decoration:none}
+.empty,.lock{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:24px;color:var(--muted)}
+.lock{display:flex;flex-direction:column;gap:12px;color:var(--ink)}
+.lock p{margin:0;color:var(--muted)}
+.lock input{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);width:100%}
+.err{color:var(--bad);font-size:13px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.small{font-size:12.5px;color:var(--muted)}
+.small a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Next Role</h1>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <form class="lock" id="lock" hidden autocomplete="off">
+    <strong>Unlock your board</strong>
+    <p>Enter your passphrase once. This phone remembers it, and your job list stays encrypted everywhere else.</p>
+    <label for="pass" class="small">Passphrase</label>
+    <input id="pass" type="password" autocomplete="current-password" required>
+    <div class="err" id="lockErr" hidden></div>
+    <button class="btn primary" type="submit" id="unlockBtn">Unlock</button>
+  </form>
+
+  <section id="app" hidden>
+    <div class="wrap" style="gap:14px">
+      <div class="counts" id="counts" aria-live="polite"></div>
+      <div class="chips" role="group" aria-label="Filter by place">
+        <button class="chip" id="f-all" data-f="all" aria-pressed="true">All</button>
+        <button class="chip" id="f-intl" data-f="intl" aria-pressed="false">Abroad</button>
+        <button class="chip" id="f-us" data-f="us" aria-pressed="false">US, relocate</button>
+        <button class="chip" id="f-remote" data-f="remote" aria-pressed="false">Remote</button>
+        <button class="chip" id="f-walmart" data-f="walmart" aria-pressed="false">Walmart</button>
+        <button class="chip" id="f-mission" data-f="mission" aria-pressed="false">Mission orgs</button>
+        <button class="chip" id="f-nwa" data-f="nwa" aria-pressed="false">NW Arkansas</button>
+      </div>
+      <div class="chips" role="group" aria-label="Filter by status">
+        <button class="chip" id="s-open" data-s="open" aria-pressed="true">Open</button>
+        <button class="chip" id="s-applied" data-s="applied" aria-pressed="false">Applied</button>
+        <button class="chip" id="s-passed" data-s="passed" aria-pressed="false">Passed</button>
+        <button class="chip" id="s-closed" data-s="closed" aria-pressed="false">Closed</button>
+      </div>
+      <div class="list" id="list"></div>
+      <div class="bar">
+        <button class="btn" id="refresh" type="button">Refresh</button>
+        <span class="small" id="boardLink"></span>
+      </div>
+      <button class="btn" id="forget" type="button" style="align-self:flex-start">Forget passphrase on this phone</button>
+    </div>
+  </section>
+</div>
+
+<script>
+const KEY = "nextrole.pass";
+const INTL = new Set(["panama","guatemala","shenzhen","canada","intl-other"]);
+const BUCKET = {nwa:"NW Arkansas",remote:"Remote (US)","us-relocate":"US, relocate",panama:"Panama",guatemala:"Guatemala",shenzhen:"Shenzhen",canada:"Canada","intl-other":"Abroad"};
+const MR = {"Strong match":0,"Possible match":1,"Probably a stretch":2};
+const BR = {panama:0,shenzhen:0,guatemala:0,canada:1,"intl-other":2,"us-relocate":3,remote:4,nwa:5};
+let data = null, place = "all", show = "open";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = (s) => { if (!s) return ""; const d = new Date(s + "T12:00:00"); return isNaN(d) ? s : d.toLocaleDateString(undefined,{month:"short",day:"numeric"}); };
+const safeGet = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
+const safeSet = (v) => { try { v == null ? localStorage.removeItem(KEY) : localStorage.setItem(KEY, v); } catch {} };
+const ub64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+
+async function decrypt(blob, pass){
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey("raw", enc.encode(pass), "PBKDF2", false, ["deriveKey"]);
+  const key = await crypto.subtle.deriveKey({name:"PBKDF2", salt: ub64(blob.salt), iterations:250000, hash:"SHA-256"}, base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv: ub64(blob.iv)}, key, ub64(blob.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+async function load(pass){
+  const r = await fetch("data.enc.json?t=" + Date.now(), {cache:"no-store"});
+  if (!r.ok) throw new Error("fetch");
+  return decrypt(await r.json(), pass);
+}
+const state = (j) => j.status === "closed" ? "closed" : j.myStatus === "applied" ? "applied" : j.myStatus === "passed" ? "passed" : "open";
+function placeOk(j){
+  const b = j.locationBucket;
+  switch(place){
+    case "intl": return INTL.has(b);
+    case "us": return b === "us-relocate";
+    case "remote": return b === "remote";
+    case "nwa": return b === "nwa";
+    case "walmart": return /walmart|sam's club/i.test(j.employer || "");
+    case "mission": return !!j.mission;
+    default: return true;
+  }
+}
+const soon = (j) => { if (!j.closingISO) return false; const d = (new Date(j.closingISO + "T23:59:00") - new Date()) / 864e5; return d >= 0 && d <= 5; };
+
+function render(){
+  const jobs = data.jobs || [];
+  $("stamp").textContent = data.lastRun ? "Scan " + fmt(data.lastRun) : "";
+  const open = jobs.filter((j) => state(j) === "open");
+  $("counts").innerHTML = `<span><strong>${open.length}</strong>open</span><span><strong>${open.filter(j=>INTL.has(j.locationBucket)).length}</strong>abroad</span><span><strong>${open.filter(j=>j.match==="Strong match").length}</strong>strong</span><span><strong>${jobs.filter(j=>j.myStatus==="applied").length}</strong>applied</span>`;
+  if (data.boardUrl) $("boardLink").innerHTML = `Mark Applied or Pass on the <a href="${esc(data.boardUrl)}" target="_blank" rel="noopener">full board</a>`;
+  const rows = jobs.filter((j) => state(j) === show && placeOk(j)).sort((a,b) =>
+    (MR[a.match] ?? 9) - (MR[b.match] ?? 9) || (BR[a.locationBucket] ?? 9) - (BR[b.locationBucket] ?? 9) || String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")));
+  const list = $("list");
+  if (!jobs.length){ list.innerHTML = `<div class="empty">No roles yet. The morning scan adds roles once it confirms them on the employer's own site.</div>`; return; }
+  if (!rows.length){ list.innerHTML = `<div class="empty">Nothing in this view. Try another filter.</div>`; return; }
+  list.innerHTML = rows.map((j) => {
+    const pc = j.match === "Strong match" ? "p-strong" : j.match === "Possible match" ? "p-possible" : "p-stretch";
+    const tags = [];
+    if (j.mission) tags.push(`<span>Mission org</span>`);
+    if (j.closing) tags.push(`<span class="${soon(j) ? "closing" : ""}">Closes ${esc(j.closing)}</span>`);
+    if (j.myStatus) tags.push(`<span class="mine">You marked: ${esc(j.myStatus)}</span>`);
+    return `<article class="card">
+      <div class="top"><div style="min-width:0">
+        <h2><a href="${esc(j.url)}" target="_blank" rel="noopener">${esc(j.title)}</a></h2>
+        <div class="emp">${esc(j.employer)}${j.seniority ? " · " + esc(j.seniority) : ""}</div>
+      </div>${j.match ? `<span class="pill ${pc}">${esc(j.match)}</span>` : ""}</div>
+      <dl class="facts">
+        <dt>Where</dt><dd>${esc(j.location)}${j.locationBucket ? ` <span class="note">(${esc(BUCKET[j.locationBucket] || j.locationBucket)})</span>` : ""}</dd>
+        <dt>Move</dt><dd>${esc(j.move)}</dd>
+        <dt>Pay</dt><dd><span class="pay">${esc(j.pay)}</span>${j.payNote ? `<div class="note">${esc(j.payNote)}</div>` : ""}</dd>
+      </dl>
+      <p class="fit">${esc(j.fit)}</p>
+      ${tags.length ? `<div class="tags">${tags.join("")}</div>` : ""}
+      <div class="foot"><span>Found ${fmt(j.firstSeen)} · checked ${fmt(j.lastVerified)}</span><a href="${esc(j.url)}" target="_blank" rel="noopener">Open posting</a></div>
+    </article>`;
+  }).join("");
+}
+
+function showLock(msg){
+  $("app").hidden = true; $("lock").hidden = false;
+  $("lockErr").hidden = !msg; $("lockErr").textContent = msg || "";
+}
+async function start(pass){
+  try {
+    data = await load(pass);
+    safeSet(pass);
+    $("lock").hidden = true; $("app").hidden = false;
+    render();
+  } catch (e) {
+    if (e && e.message === "fetch") showLock("Can't reach the board right now. Check your connection and try again.");
+    else { safeSet(null); showLock("That passphrase didn't unlock the board. Check it and try again."); }
+  }
+}
+$("lock").addEventListener("submit", (e) => { e.preventDefault(); const p = $("pass").value.trim(); if (p) start(p); });
+$("refresh").addEventListener("click", () => { const p = safeGet(); if (p) start(p); });
+$("forget").addEventListener("click", () => { safeSet(null); data = null; $("pass").value = ""; showLock(""); });
+document.querySelectorAll("[data-f]").forEach((b) => b.addEventListener("click", () => { place = b.dataset.f; document.querySelectorAll("[data-f]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); render(); }));
+document.querySelectorAll("[data-s]").forEach((b) => b.addEventListener("click", () => { show = b.dataset.s; document.querySelectorAll("[data-s]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); render(); }));
+document.addEventListener("visibilitychange", () => { if (!document.hidden && data) { const p = safeGet(); if (p) start(p); } });
+
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+const saved = safeGet();
+saved ? start(saved) : showLock("");
+</script>
+</body>
+</html>
