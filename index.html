@@ -108,6 +108,7 @@ details.notes textarea{margin-top:6px;width:100%;min-height:70px;font:inherit;fo
         <button class="chip" id="f-nwa" data-f="nwa" aria-pressed="false">NW Arkansas</button>
       </div>
       <div class="chips" role="group" aria-label="Filter by your status" id="views"></div>
+      <div class="chips" role="group" aria-label="Sort the roles" id="sorts"></div>
       <div class="list" id="list"></div>
       <div class="bar">
         <span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="refresh" type="button">Refresh</button><button class="btn primary" id="dl" type="button">Download spreadsheet</button></span>
@@ -125,7 +126,34 @@ const INTL = new Set(["panama","guatemala","shenzhen","canada","intl-other"]);
 const BUCKET = {nwa:"NW Arkansas",remote:"Remote (US)","us-relocate":"US, relocate",panama:"Panama",guatemala:"Guatemala",shenzhen:"Shenzhen",canada:"Canada","intl-other":"Abroad"};
 const MR = {"Strong match":0,"Possible match":1,"Probably a stretch":2};
 const BR = {panama:0,shenzhen:0,guatemala:0,canada:1,"intl-other":2,"us-relocate":3,remote:4,nwa:5};
-let data = null, place = "all", show = "new";
+let data = null, place = "all", show = "new", sortBy = "match";
+// Sort orders offered above the list; "match" is the scan's own ranking and stays the default.
+const SORTS = [
+  {k:"match", label:"Best match"},
+  {k:"new", label:"Newest found"},
+  {k:"old", label:"Oldest found"},
+  {k:"checked", label:"Just checked"},
+  {k:"closing", label:"Closing soonest"}
+];
+const SKEY = "nextrole.sort";
+try { const s = localStorage.getItem(SKEY); if (s && SORTS.some((x) => x.k === s)) sortBy = s; } catch {}
+const byMatch = (a,b) => (MR[a.match] ?? 9) - (MR[b.match] ?? 9) || (BR[a.locationBucket] ?? 9) - (BR[b.locationBucket] ?? 9) || String(b.firstSeen||"").localeCompare(String(a.firstSeen||""));
+// Date sorts fall back to the ranking for ties; roles with no date sit last either way.
+const newestBy = (f) => (a,b) => String(b[f]||"").localeCompare(String(a[f]||"")) || byMatch(a,b);
+const oldestBy = (f) => (a,b) => {
+  const x = String(a[f]||""), y = String(b[f]||"");
+  if (!x && !y) return byMatch(a,b);
+  if (!x) return 1;
+  if (!y) return -1;
+  return x.localeCompare(y) || byMatch(a,b);
+};
+function comparator(){
+  if (sortBy === "new") return newestBy("firstSeen");
+  if (sortBy === "old") return oldestBy("firstSeen");
+  if (sortBy === "checked") return newestBy("lastVerified");
+  if (sortBy === "closing") return oldestBy("closingISO");
+  return byMatch;
+}
 const TKEY = "nextrole.track";
 const MINE = [
   {k:"saved", label:"Save", name:"Saved"}, {k:"applied", label:"Applied", name:"Applied"},
@@ -200,8 +228,8 @@ function render(){
   $("views").innerHTML = VIEWS.map((v) => `<button class="chip" type="button" data-v="${v.k}" aria-pressed="${v.k === show}">${esc(v.label)} ${jobs.filter((j) => v.test(j, mine(j))).length}</button>`).join("");
   if (data.boardUrl) $("boardLink").innerHTML = `Open the <a href="${esc(data.boardUrl)}" target="_blank" rel="noopener">full board</a>`;
   const vt = (VIEWS.find((v) => v.k === show) || VIEWS[0]).test;
-  const rows = jobs.filter((j) => vt(j, mine(j)) && placeOk(j)).sort((a,b) =>
-    (MR[a.match] ?? 9) - (MR[b.match] ?? 9) || (BR[a.locationBucket] ?? 9) - (BR[b.locationBucket] ?? 9) || String(b.firstSeen||"").localeCompare(String(a.firstSeen||"")));
+  $("sorts").innerHTML = SORTS.map((s) => `<button class="chip" type="button" data-s="${s.k}" aria-pressed="${s.k === sortBy}">${esc(s.label)}</button>`).join("");
+  const rows = jobs.filter((j) => vt(j, mine(j)) && placeOk(j)).sort(comparator());
   const list = $("list");
   if (!jobs.length){ list.innerHTML = `<div class="empty">No roles yet. The morning scan adds roles once it confirms them on the employer's own site.</div>`; return; }
   if (!rows.length){ list.innerHTML = `<div class="empty">Nothing in this view yet. ${show === "saved" ? "Tap Save on a role to add it here." : "Try another filter."}</div>`; return; }
@@ -255,6 +283,7 @@ $("refresh").addEventListener("click", () => { const p = safeGet(); if (p) start
 $("forget").addEventListener("click", () => { safeSet(null); data = null; $("pass").value = ""; showLock(""); });
 document.querySelectorAll("[data-f]").forEach((b) => b.addEventListener("click", () => { place = b.dataset.f; document.querySelectorAll("[data-f]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); render(); }));
 $("views").addEventListener("click", (e) => { const b = e.target.closest("[data-v]"); if (!b) return; show = b.dataset.v; render(); });
+$("sorts").addEventListener("click", (e) => { const b = e.target.closest("[data-s]"); if (!b) return; sortBy = b.dataset.s; try { localStorage.setItem(SKEY, sortBy); } catch {} render(); });
 $("list").addEventListener("click", (e) => {
   const b = e.target.closest(".act[data-m]"); if (!b || !data) return;
   const j = (data.jobs || []).find((x) => keyOf(x) === b.dataset.k); if (!j) return;
